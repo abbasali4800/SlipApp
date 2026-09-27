@@ -2,6 +2,17 @@ import { createClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import bcrypt from 'bcryptjs';
 
+// React Native / Hermes Crypto Random Fallback
+if (typeof bcrypt.setRandomFallback === 'function') {
+  bcrypt.setRandomFallback((len) => {
+    const buf = [];
+    for (let i = 0; i < len; i++) {
+      buf.push(Math.floor(Math.random() * 256));
+    }
+    return buf;
+  });
+}
+
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://wrrvurciwugnkuajdewr.supabase.co';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndycnZ1cmNpd3Vnbmt1YWpkZXdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA0ODc1MzQsImV4cCI6MjEwNjA2MzUzNH0.AwrudQi3Pn2GaKZA9Pf4nwem8RVp86DYI6qmLjsBSco';
 
