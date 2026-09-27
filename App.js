@@ -7,6 +7,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as SecureStore from 'expo-secure-store';
 import { COLOR_THEMES, applyTheme, rgba, theme } from './theme';
+import {
+  loginUser,
+  getBillsForDate,
+  markBillPaid,
+  markBillParcel,
+  markBillParcelPaid,
+  resetBill,
+  getDailyNote,
+  saveDailyNote as saveNoteSupabase,
+  getUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  getAnalytics,
+} from './supabase';
 
 const REMEMBERED_LOGIN_KEY = 'slip_app_remembered_login';
 const SELECTED_THEME_KEY = 'slip_app_selected_theme';
@@ -55,50 +70,80 @@ function stringifyNoteContent(left, right) {
   return JSON.stringify({ left, right });
 }
 
-const PRIMARY_API_URL = 'http://192.168.0.107:4000';
-const FALLBACK_API_URL = 'https://tender-cats-wish.loca.lt';
-
 async function api(path, options = {}) {
-  const fetchUrl = async (baseUrl) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
-    try {
-      console.log(`[API Request] ${options.method || 'GET'} ${baseUrl}${path}`);
-      const response = await fetch(`${baseUrl}${path}`, {
-        method: options.method || 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'bypass-tunnel-reminder': 'true',
-          ...(options.headers || {})
-        },
-        body: options.body ? JSON.stringify(options.body) : undefined,
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        console.warn(`[API Error Response] ${baseUrl}${path} -> status ${response.status}`, data);
-        throw new Error(data.message || 'Request failed.');
-      }
-      console.log(`[API Success] ${baseUrl}${path} -> status ${response.status}`);
-      return data;
-    } catch (err) {
-      clearTimeout(timeoutId);
-      console.warn(`[API Fetch Failed] ${baseUrl}${path} -> ${err.message}`);
-      throw err;
-    }
-  };
+  const method = (options.method || 'GET').toUpperCase();
+  const body = options.body || {};
 
-  try {
-    return await fetchUrl(PRIMARY_API_URL);
-  } catch (lanError) {
-    console.log(`[API LAN Failed, trying fallback] ${FALLBACK_API_URL}${path}`);
-    try {
-      return await fetchUrl(FALLBACK_API_URL);
-    } catch (tunnelError) {
-      throw lanError.message?.includes('Request failed') ? lanError : tunnelError;
-    }
+  // 1. Auth: /auth/login
+  if (path === '/auth/login' && method === 'POST') {
+    const user = await loginUser(body.username, body.password);
+    return { user };
   }
+
+  // 2. Bills: GET /bills?date=YYYY-MM-DD
+  if (path.startsWith('/bills?') || path === '/bills') {
+    const dateMatch = path.match(/date=([^&]+)/);
+    const date = dateMatch ? dateMatch[1] : today();
+    return await getBillsForDate(date);
+  }
+
+  // 3. Analytics: GET /bills/analytics?date=YYYY-MM-DD
+  if (path.startsWith('/bills/analytics')) {
+    const dateMatch = path.match(/date=([^&]+)/);
+    const date = dateMatch ? dateMatch[1] : today();
+    return await getAnalytics(date);
+  }
+
+  // 4. Bills: Actions
+  if (path === '/bills/paid' && method === 'POST') {
+    return await markBillPaid(body.billDate, body.billNumber, body.userId);
+  }
+
+  if (path === '/bills/parcel' && method === 'POST') {
+    return await markBillParcel(body.billDate, body.billNumber, body.amount, body.parcelType, body.userId);
+  }
+
+  if (path === '/bills/parcel-paid' && method === 'POST') {
+    return await markBillParcelPaid(body.billDate, body.billNumber, body.userId);
+  }
+
+  if (path === '/bills/reset' && method === 'POST') {
+    return await resetBill(body.billDate, body.billNumber, body.userId);
+  }
+
+  // 5. Notes: GET /notes & POST /notes
+  if (path.startsWith('/notes') && method === 'GET') {
+    const dateMatch = path.match(/date=([^&]+)/);
+    const userMatch = path.match(/userId=([^&]+)/);
+    const date = dateMatch ? dateMatch[1] : today();
+    const userId = userMatch ? Number(userMatch[1]) : 1;
+    return await getDailyNote(date, userId);
+  }
+
+  if (path === '/notes' && method === 'POST') {
+    return await saveNoteSupabase(body.noteDate, body.userId, body.content);
+  }
+
+  // 6. Users CRUD
+  if (path === '/users' && method === 'GET') {
+    return await getUsers();
+  }
+
+  if (path === '/users' && method === 'POST') {
+    return await createUser(body);
+  }
+
+  if (path.startsWith('/users/') && method === 'PATCH') {
+    const id = Number(path.split('/')[2]);
+    return await updateUser(id, body);
+  }
+
+  if (path.startsWith('/users/') && method === 'DELETE') {
+    const id = Number(path.split('/')[2]);
+    return await deleteUser(id);
+  }
+
+  throw new Error(`Unhandled route: ${method} ${path}`);
 }
 
 export default function App() {
