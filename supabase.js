@@ -224,6 +224,24 @@ export async function saveDailyNote(noteDate, userId, content) {
   return data;
 }
 
+// Helper: Parse 'YYYY-MM-DD' into local Date object (midnight local time)
+function parseLocalDate(dateStr) {
+  if (!dateStr) return new Date();
+  const parts = String(dateStr).split('-').map(Number);
+  if (parts.length < 3 || isNaN(parts[0]) || isNaN(parts[1]) || isNaN(parts[2])) {
+    return new Date();
+  }
+  return new Date(parts[0], parts[1] - 1, parts[2]);
+}
+
+// Helper: Format Date object to 'YYYY-MM-DD' in local time
+function formatLocalDate(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const d = String(dateObj.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // 9. Users: Get All Users
 export async function getUsers() {
   const { data, error } = await supabase
@@ -231,11 +249,11 @@ export async function getUsers() {
     .select('id, name, username, issuperadmin, is_active')
     .order('id', { ascending: true });
 
-  if (error) throw new Error(error.message);
-  return data.map((u) => ({
+  if (error) throw new Error(typeof error === 'string' ? error : error?.message || 'Failed to fetch users');
+  return (data || []).map((u) => ({
     id: u.id,
-    name: u.name,
-    username: u.username,
+    name: String(u.name || ''),
+    username: String(u.username || ''),
     issuperadmin: Boolean(u.issuperadmin),
     isActive: Boolean(u.is_active),
   }));
@@ -243,12 +261,20 @@ export async function getUsers() {
 
 // 10. Users: Create User
 export async function createUser(userData) {
-  const passwordHash = await bcrypt.hash(userData.password, 10);
+  const name = String(userData.name || '').trim();
+  const username = String(userData.username || '').trim().toLowerCase();
+  const password = String(userData.password || '');
+
+  if (!name || !username || !password) {
+    throw new Error('Name, username, and password are required.');
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
   const { data, error } = await supabase
     .from('users')
     .insert({
-      name: userData.name.trim(),
-      username: userData.username.trim().toLowerCase(),
+      name,
+      username,
       password_hash: passwordHash,
       issuperadmin: Boolean(userData.issuperadmin),
       is_active: Boolean(userData.isActive ?? true),
@@ -256,11 +282,20 @@ export async function createUser(userData) {
     .select('id, name, username, issuperadmin, is_active')
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    const msg = error.message || String(error);
+    if (msg.includes('duplicate key') || msg.includes('users_username_key')) {
+      throw new Error(`Username "${username}" already exists.`);
+    }
+    throw new Error(msg);
+  }
+
+  if (!data) throw new Error('No data returned when creating user.');
+
   return {
     id: data.id,
-    name: data.name,
-    username: data.username,
+    name: String(data.name || ''),
+    username: String(data.username || ''),
     issuperadmin: Boolean(data.issuperadmin),
     isActive: Boolean(data.is_active),
   };
@@ -268,14 +303,13 @@ export async function createUser(userData) {
 
 // 11. Users: Update User
 export async function updateUser(userId, userData) {
-  const payload = {
-    name: userData.name?.trim(),
-    username: userData.username?.trim().toLowerCase(),
-    issuperadmin: userData.issuperadmin !== undefined ? Boolean(userData.issuperadmin) : undefined,
-    is_active: userData.isActive !== undefined ? Boolean(userData.isActive) : undefined,
-  };
+  const payload = {};
+  if (userData.name !== undefined) payload.name = String(userData.name).trim();
+  if (userData.username !== undefined) payload.username = String(userData.username).trim().toLowerCase();
+  if (userData.issuperadmin !== undefined) payload.issuperadmin = Boolean(userData.issuperadmin);
+  if (userData.isActive !== undefined) payload.is_active = Boolean(userData.isActive);
   if (userData.password) {
-    payload.password_hash = await bcrypt.hash(userData.password, 10);
+    payload.password_hash = await bcrypt.hash(String(userData.password), 10);
   }
 
   const { data, error } = await supabase
@@ -285,11 +319,13 @@ export async function updateUser(userId, userData) {
     .select('id, name, username, issuperadmin, is_active')
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(typeof error === 'string' ? error : error?.message || 'Failed to update user');
+  if (!data) throw new Error('No data returned when updating user.');
+
   return {
     id: data.id,
-    name: data.name,
-    username: data.username,
+    name: String(data.name || ''),
+    username: String(data.username || ''),
     issuperadmin: Boolean(data.issuperadmin),
     isActive: Boolean(data.is_active),
   };
@@ -298,13 +334,13 @@ export async function updateUser(userId, userData) {
 // 12. Users: Delete User
 export async function deleteUser(userId) {
   const { error } = await supabase.from('users').delete().eq('id', userId);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(typeof error === 'string' ? error : error?.message || 'Failed to delete user');
   return true;
 }
 
 // 13. Analytics & Dashboard Metrics
 export async function getAnalytics(targetDateStr) {
-  const targetDate = new Date(targetDateStr);
+  const targetDateObj = parseLocalDate(targetDateStr);
 
   const { data: dayBills } = await supabase.from('bills').select('*, users(name, username)').eq('bill_date', targetDateStr);
   const { data: allBills } = await supabase.from('bills').select('*');
@@ -324,24 +360,29 @@ export async function getAnalytics(targetDateStr) {
   const countCompletedOnDate = (dStr) =>
     billsAll.filter((b) => b.bill_date === dStr && (b.status === 'paid' || b.status === 'parcel_paid')).length;
 
-  const getOffsetDateStr = (days) => {
-    const d = new Date(targetDate);
-    d.setDate(d.getDate() + days);
-    return d.toISOString().slice(0, 10);
-  };
+  // Calculate Monday of current week
+  const dayOfWeek = targetDateObj.getDay(); // 0=Sun, 1=Mon...
+  const diffToMonday = (dayOfWeek + 6) % 7; // 0 for Mon, 6 for Sun
+  const mondayDateObj = new Date(targetDateObj);
+  mondayDateObj.setDate(mondayDateObj.getDate() - diffToMonday);
 
-  const getDayLabel = (dStr) => {
-    const d = new Date(dStr);
-    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
-  };
-
-  const weeklyGraph = Array.from({ length: 7 }, (_, i) => {
-    const offset = i - 6;
-    const dateStr = getOffsetDateStr(offset);
-    return { label: getDayLabel(dateStr), date: dateStr, count: countCompletedOnDate(dateStr) };
+  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  
+  const weeklyRaw = dayLabels.map((label, index) => {
+    const d = new Date(mondayDateObj);
+    d.setDate(d.getDate() + index);
+    const dStr = formatLocalDate(d);
+    return { label, date: dStr, count: countCompletedOnDate(dStr) };
   });
 
-  const getDayOfMonth = (dStr) => new Date(dStr).getDate();
+  const maxWeeklyCount = Math.max(...weeklyRaw.map((w) => w.count), 1);
+  const weeklyGraph = weeklyRaw.map((w) => ({
+    label: w.label,
+    date: w.date,
+    val: w.count,
+    height: w.count > 0 ? Math.min(90, Math.max(15, Math.round((w.count / maxWeeklyCount) * 85))) : 0,
+  }));
+
   const getWeekOfMonthLabel = (dayNum) => {
     if (dayNum <= 7) return 'W1 (1-7)';
     if (dayNum <= 14) return 'W2 (8-14)';
@@ -349,24 +390,32 @@ export async function getAnalytics(targetDateStr) {
     return 'W4 (22+)';
   };
 
-  const currentYear = targetDate.getFullYear();
-  const currentMonth = targetDate.getMonth();
+  const currentYear = targetDateObj.getFullYear();
+  const currentMonth = targetDateObj.getMonth();
+
   const monthBills = billsAll.filter((b) => {
     if (!b.bill_date) return false;
-    const bd = new Date(b.bill_date);
+    const bd = parseLocalDate(b.bill_date);
     return bd.getFullYear() === currentYear && bd.getMonth() === currentMonth && (b.status === 'paid' || b.status === 'parcel_paid');
   });
 
   const monthBuckets = { 'W1 (1-7)': 0, 'W2 (8-14)': 0, 'W3 (15-21)': 0, 'W4 (22+)': 0 };
   monthBills.forEach((b) => {
-    const label = getWeekOfMonthLabel(getDayOfMonth(b.bill_date));
+    const bd = parseLocalDate(b.bill_date);
+    const label = getWeekOfMonthLabel(bd.getDate());
     monthBuckets[label] = (monthBuckets[label] || 0) + 1;
   });
-  const monthlyGraph = Object.entries(monthBuckets).map(([label, count]) => ({ label, count }));
+
+  const maxMonthlyCount = Math.max(...Object.values(monthBuckets), 1);
+  const monthlyGraph = Object.entries(monthBuckets).map(([label, count]) => ({
+    label,
+    val: count,
+    height: count > 0 ? Math.min(90, Math.max(15, Math.round((count / maxMonthlyCount) * 85))) : 0,
+  }));
 
   const yearlyBills = billsAll.filter((b) => {
     if (!b.bill_date) return false;
-    const bd = new Date(b.bill_date);
+    const bd = parseLocalDate(b.bill_date);
     return bd.getFullYear() === currentYear && (b.status === 'paid' || b.status === 'parcel_paid');
   });
 
@@ -379,14 +428,24 @@ export async function getAnalytics(targetDateStr) {
 
   const quarterBuckets = { 'Q1 (Jan-Mar)': 0, 'Q2 (Apr-Jun)': 0, 'Q3 (Jul-Sep)': 0, 'Q4 (Oct-Dec)': 0 };
   yearlyBills.forEach((b) => {
-    const label = getQuarterLabel(new Date(b.bill_date).getMonth());
+    const bd = parseLocalDate(b.bill_date);
+    const label = getQuarterLabel(bd.getMonth());
     quarterBuckets[label] = (quarterBuckets[label] || 0) + 1;
   });
-  const yearlyGraph = Object.entries(quarterBuckets).map(([label, count]) => ({ label, count }));
 
+  const maxYearlyCount = Math.max(...Object.values(quarterBuckets), 1);
+  const yearlyGraph = Object.entries(quarterBuckets).map(([label, count]) => ({
+    label,
+    val: count,
+    height: count > 0 ? Math.min(90, Math.max(15, Math.round((count / maxYearlyCount) * 85))) : 0,
+  }));
+
+  const yesterdayObj = new Date(targetDateObj);
+  yesterdayObj.setDate(yesterdayObj.getDate() - 1);
+  const yesterdayCount = countCompletedOnDate(formatLocalDate(yesterdayObj));
+
+  const mondayCount = countCompletedOnDate(formatLocalDate(mondayDateObj));
   const todayCount = completedCount;
-  const yesterdayCount = countCompletedOnDate(getOffsetDateStr(-1));
-  const mondayCount = countCompletedOnDate(getOffsetDateStr(-((targetDate.getDay() + 6) % 7)));
 
   return {
     kpis: {
@@ -411,3 +470,4 @@ export async function getAnalytics(targetDateStr) {
     ],
   };
 }
+
