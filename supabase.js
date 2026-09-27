@@ -67,7 +67,7 @@ export async function loginUser(username, password) {
 
   console.log(`[Supabase Auth Found User] ID: ${user.id}, Hash in DB: ${user.password_hash?.slice(0, 15)}...`);
   
-  const isValid = await bcrypt.compare(password, user.password_hash);
+  const isValid = bcrypt.compareSync(String(password), String(user.password_hash));
   console.log(`[Supabase Auth Password Compare] Result for "${cleanUsername}": ${isValid ? 'MATCH ✅' : 'MISMATCH ❌'}`);
 
   if (!isValid) {
@@ -269,7 +269,7 @@ export async function createUser(userData) {
     throw new Error('Name, username, and password are required.');
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = bcrypt.hashSync(password, 10);
   const { data, error } = await supabase
     .from('users')
     .insert({
@@ -309,7 +309,7 @@ export async function updateUser(userId, userData) {
   if (userData.issuperadmin !== undefined) payload.issuperadmin = Boolean(userData.issuperadmin);
   if (userData.isActive !== undefined) payload.is_active = Boolean(userData.isActive);
   if (userData.password) {
-    payload.password_hash = await bcrypt.hash(String(userData.password), 10);
+    payload.password_hash = bcrypt.hashSync(String(userData.password), 10);
   }
 
   const { data, error } = await supabase
