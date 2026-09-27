@@ -1,36 +1,37 @@
 {
-    "expo":  {
-                 "name":  "SlipApp",
-                 "slug":  "SlipApp",
-                 "version":  "1.0.0",
-                 "orientation":  "portrait",
-                 "icon":  "./assets/icon.png",
-                 "userInterfaceStyle":  "light",
-                 "ios":  {
-                             "supportsTablet":  true
-                         },
-                 "android":  {
-                                 "adaptiveIcon":  {
-                                                      "backgroundColor":  "#0A6B78",
-                                                      "foregroundImage":  "./assets/android-icon-foreground.png",
-                                                      "backgroundImage":  "./assets/android-icon-background.png",
-                                                      "monochromeImage":  "./assets/android-icon-monochrome.png"
-                                                  },
-                                 "package":  "com.demonbeast4800.SlipApp",
-                                 "usesCleartextTraffic":  true
-                             },
-                 "web":  {
-                             "favicon":  "./assets/favicon.png"
-                         },
-                 "plugins":  [
-                                 "@react-native-community/datetimepicker",
-                                 "expo-secure-store",
-                                 "./plugins/withCleartextTraffic"
-                             ],
-                 "extra":  {
-                               "eas":  {
-                                           "projectId":  "feff217d-782d-48ec-8faf-b6d121f6483e"
-                                       }
-                           }
-             }
+  "expo": {
+    "name": "SlipApp",
+    "slug": "SlipApp",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.demonbeast4800.SlipApp"
+    },
+    "android": {
+      "package": "com.demonbeast4800.SlipApp",
+      "adaptiveIcon": {
+        "backgroundColor": "#0A6B78",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "usesCleartextTraffic": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      "expo-secure-store",
+      "./plugins/withCleartextTraffic"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "66ca7643-404e-4647-88f0-a9cbd9101620"
+      }
+    }
+  }
 }

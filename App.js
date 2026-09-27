@@ -1424,12 +1424,18 @@ function UsersPage({ session }) {
   }
 
   async function saveUser() {
-    if (!form.name.trim() || !form.username.trim() || !editingUser && !form.password) return setMessage('Name, username, and password are required.');
+    const name = String(form.name || '').trim();
+    const username = String(form.username || '').trim().toLowerCase();
+    const password = String(form.password || '');
+
+    if (!name || !username || (!editingUser && !password)) {
+      return setMessage('Name, username, and password are required.');
+    }
     setBusy(true);
     setMessage('');
     try {
-      const body = { ...form, name: form.name.trim(), username: form.username.trim().toLowerCase() };
-      if (editingUser && !body.password) delete body.password;
+      const body = { ...form, name, username, password };
+      if (editingUser && !password) delete body.password;
       const saved = editingUser ?
         await api(`/users/${editingUser.id}`, { method: 'PATCH', headers: { 'x-superadmin-id': String(session.id) }, body }) :
         await api('/users', { method: 'POST', headers: { 'x-superadmin-id': String(session.id) }, body });
@@ -1438,7 +1444,7 @@ function UsersPage({ session }) {
       setForm(emptyForm);
       setEditingUser(null);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(typeof error === 'string' ? error : error?.message || 'Failed to save user.');
     } finally {
       setBusy(false);
     }
