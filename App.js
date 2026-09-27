@@ -1061,12 +1061,17 @@ function SlipPage({ session, cardSize, paidColor, parcelColor }) {
 
   useEffect(() => { loadBills(); }, [billDate]);
 
-  function openBill(bill) {
+  function openBill(bill, forceAudit = false) {
     setSelectedBill(bill);
     setParcelAmount(bill.amount ? String(bill.amount) : '');
     setDrawerOpen(false);
     setParcelPayOpen(false);
     setDetailsOpen(false);
+
+    if (forceAudit) {
+      setDetailsOpen(true);
+      return;
+    }
 
     if (bill.status === 'parcel_pending') {
       setParcelPayOpen(true);
@@ -1271,9 +1276,20 @@ function BillCell({ bill, selected, onPress, cardSize, paidColor, parcelColor })
   const isSheruParcel = bill.parcelType === 'sheru';
   const isSmall = cardSize === 'small';
 
+  const lastTap = useRef(0);
+  const handlePress = () => {
+    const now = Date.now();
+    if (now - lastTap.current < 350) {
+      onPress?.(true); // Double click -> force audit details
+    } else {
+      onPress?.(false);
+    }
+    lastTap.current = now;
+  };
+
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       style={[
         styles.cell,
         isSmall && styles.cellSmall,
@@ -1321,8 +1337,11 @@ function CompletedBillPanel({ bill, busy, message, updateBill, session }) {
   const typeLabel = bill?.parcelType === 'sheru' ? 'Com Parcel' : isParcel ? 'Parcel' : 'Paid Slip';
   const statusLabel = isParcel ? `${typeLabel} Paid` : 'Paid';
 
-  const editedTime = bill?.updatedAt || bill?.paidAt || bill?.parcelPaidAt;
+  const editedTime = bill?.updatedAt || bill?.paidAt || bill?.parcelPaidAt || bill?.parcelSentAt;
   const formattedTime = editedTime ? new Date(editedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
+  const editorName = bill?.editor?.name || bill?.editorName;
+  const editorUsername = bill?.editor?.username || '';
+  const editorRole = bill?.editor?.role || (session?.issuperadmin ? 'Superadmin' : 'Cashier');
 
   return (
     <View style={[styles.actionCard, styles.completedCard]}>
@@ -1331,14 +1350,14 @@ function CompletedBillPanel({ bill, busy, message, updateBill, session }) {
         {isParcel && bill?.amount ? <Text style={styles.completedAmount}>Rs {bill.amount}</Text> : null}
         
         {/* Editor audit details for SuperAdmin */}
-        {session?.issuperadmin && bill?.editor ? (
+        {editorName ? (
           <View style={styles.auditCard}>
             <Text style={styles.auditHeader}>LAST EDITED BY</Text>
             <View style={styles.auditRow}>
               <Ionicons name="person-circle-outline" size={24} color="#2F4336" />
               <View style={{ flex: 1 }}>
-                <Text style={styles.auditName}>{bill.editor.name} (@{bill.editor.username})</Text>
-                <Text style={styles.auditRole}>Role: {bill.editor.role}</Text>
+                <Text style={styles.auditName}>{editorName} {editorUsername ? `(@${editorUsername})` : ''}</Text>
+                <Text style={styles.auditRole}>Role: {editorRole}</Text>
               </View>
             </View>
             <View style={styles.auditTimeRow}>
@@ -1359,8 +1378,14 @@ function SmallButton({ color, disabled, label, onPress }) {
   return <Pressable disabled={disabled} onPress={onPress} style={[styles.smallBtn, { backgroundColor: color }, disabled && styles.disabled]}><Text style={styles.smallBtnText}>{label}</Text></Pressable>;
 }
 
-function ParcelPayPanel({ bill, busy, message, updateBill }) {
+function ParcelPayPanel({ bill, busy, message, updateBill, session }) {
   const disabled = !bill || busy;
+  const editedTime = bill?.updatedAt || bill?.parcelSentAt || bill?.paidAt;
+  const formattedTime = editedTime ? new Date(editedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'N/A';
+  const editorName = bill?.editor?.name || bill?.editorName;
+  const editorUsername = bill?.editor?.username || '';
+  const editorRole = bill?.editor?.role || (session?.issuperadmin ? 'Superadmin' : 'Cashier');
+
   return <View style={[styles.actionCard, styles.parcelPayCard]}>
     <Text style={styles.parcelPayKicker}>{bill?.parcelType === 'sheru' ? 'Commission parcel' : 'Parcel payment'}</Text>
     <View style={styles.parcelPaySummary}>
@@ -1370,6 +1395,22 @@ function ParcelPayPanel({ bill, busy, message, updateBill }) {
       </View>
       <Text style={styles.parcelPayAmount}>Rs {Number(bill?.amount || 0).toFixed(0)}</Text>
     </View>
+    {editorName ? (
+      <View style={styles.auditCard}>
+        <Text style={styles.auditHeader}>PARCEL CREATED BY</Text>
+        <View style={styles.auditRow}>
+          <Ionicons name="person-circle-outline" size={24} color="#2F4336" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.auditName}>{editorName} {editorUsername ? `(@${editorUsername})` : ''}</Text>
+            <Text style={styles.auditRole}>Role: {editorRole}</Text>
+          </View>
+        </View>
+        <View style={styles.auditTimeRow}>
+          <Ionicons name="time-outline" size={14} color="#6B8E7B" />
+          <Text style={styles.auditTimeText}>Created at {formattedTime}</Text>
+        </View>
+      </View>
+    ) : null}
     <View style={styles.actionRow}>
       <SmallButton disabled={disabled} label="Paid" color={theme.colors.accent} onPress={() => updateBill('/bills/parcel-paid', { billNumber: bill.billNumber })} />
     </View>

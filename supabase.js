@@ -35,6 +35,11 @@ export const MAX_BILL_NUMBER = 250;
 
 // Helper: Format DB row to App bill object
 function toBillResponse(row) {
+  const u = row.users || {};
+  const editorName = u.name || (row.created_by ? `User #${row.created_by}` : null);
+  const editorUsername = u.username || '';
+  const editorRole = u.issuperadmin ? 'Superadmin' : 'Cashier';
+
   return {
     id: row.id,
     billNumber: row.bill_number,
@@ -46,7 +51,13 @@ function toBillResponse(row) {
     paidAt: row.paid_at || null,
     parcelSentAt: row.parcel_sent_at || null,
     parcelPaidAt: row.parcel_paid_at || null,
-    editorName: row.users?.name || null,
+    editorName: editorName,
+    editor: editorName ? {
+      name: editorName,
+      username: editorUsername,
+      role: editorRole,
+    } : null,
+    updatedAt: row.parcel_paid_at || row.paid_at || row.parcel_sent_at || null,
   };
 }
 
@@ -98,7 +109,7 @@ export async function loginUser(username, password) {
 export async function getBillsForDate(billDate) {
   const { data: savedBills, error } = await supabase
     .from('bills')
-    .select('*, users(name)')
+    .select('*, users(name, username, issuperadmin)')
     .eq('bill_date', billDate)
     .order('bill_number', { ascending: true });
 
@@ -137,7 +148,7 @@ export async function markBillPaid(billDate, billNumber, userId) {
       parcel_sent_at: null,
       parcel_paid_at: null,
     }, { onConflict: 'bill_date,bill_number' })
-    .select('*, users(name)')
+    .select('*, users(name, username, issuperadmin)')
     .single();
 
   if (error) throw new Error(error.message);
@@ -159,7 +170,7 @@ export async function markBillParcel(billDate, billNumber, amount, parcelType, u
       paid_at: null,
       parcel_paid_at: null,
     }, { onConflict: 'bill_date,bill_number' })
-    .select('*, users(name)')
+    .select('*, users(name, username, issuperadmin)')
     .single();
 
   if (error) throw new Error(error.message);
@@ -177,7 +188,7 @@ export async function markBillParcelPaid(billDate, billNumber, userId) {
       created_by: userId,
       parcel_paid_at: new Date().toISOString(),
     }, { onConflict: 'bill_date,bill_number' })
-    .select('*, users(name)')
+    .select('*, users(name, username, issuperadmin)')
     .single();
 
   if (error) throw new Error(error.message);
@@ -199,7 +210,7 @@ export async function resetBill(billDate, billNumber, userId) {
       parcel_sent_at: null,
       parcel_paid_at: null,
     }, { onConflict: 'bill_date,bill_number' })
-    .select('*, users(name)')
+    .select('*, users(name, username, issuperadmin)')
     .single();
 
   if (error) throw new Error(error.message);
@@ -353,7 +364,7 @@ export async function deleteUser(userId) {
 export async function getAnalytics(targetDateStr) {
   const targetDateObj = parseLocalDate(targetDateStr);
 
-  const { data: dayBills } = await supabase.from('bills').select('*, users(name, username)').eq('bill_date', targetDateStr);
+  const { data: dayBills } = await supabase.from('bills').select('*, users(name, username, issuperadmin)').eq('bill_date', targetDateStr);
   const { data: allBills } = await supabase.from('bills').select('*');
 
   const billsForDay = dayBills || [];
@@ -361,6 +372,30 @@ export async function getAnalytics(targetDateStr) {
 
   const completedCount = billsForDay.filter((b) => b.status === 'paid' || b.status === 'parcel_paid').length;
   const uniqueEditors = Array.from(new Set(billsForDay.map((b) => b.created_by).filter(Boolean)));
+
+  const editorMap = new Map();
+  billsForDay.forEach((b) => {
+    if (!b.created_by) return;
+    const userId = b.created_by;
+    const u = b.users || {};
+    const userName = u.name || `User #${userId}`;
+    const username = u.username || 'cashier';
+    const role = u.issuperadmin ? 'Superadmin' : 'Cashier';
+
+    if (!editorMap.has(userId)) {
+      editorMap.set(userId, {
+        id: userId,
+        name: userName,
+        username: username,
+        role: role,
+        editedSlipsCount: 0,
+      });
+    }
+    const ed = editorMap.get(userId);
+    ed.editedSlipsCount += 1;
+  });
+
+  const activeEditors = Array.from(editorMap.values());
   
   const parcelBills = billsForDay.filter((b) => b.status === 'parcel_pending' || b.status === 'parcel_paid');
   const commParcelBills = parcelBills.filter((b) => b.parcel_type === 'sheru');
@@ -468,7 +503,7 @@ export async function getAnalytics(targetDateStr) {
       normalParcelCount,
       commTotal,
       commCommission,
-      activeEditors: [],
+      activeEditors: activeEditors,
     },
     graphs: {
       weekly: weeklyGraph,
