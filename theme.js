@@ -1,83 +1,39 @@
 const baseStatusColors = {
   placeholder: '#94A3B8',
-  border: '#E2E8F0',
-  softBorder: '#CBD5E1',
-  success: '#16A34A',
-  successSoft: '#DCFCE7',
-  warning: '#F97316',
-  warningSoft: '#FFEDD5',
-  purple: '#7C3AED',
-  purpleSoft: '#F3E8FF',
-  danger: '#DC2626',
-  dangerSoft: '#FEE2E2',
+  border: '#D8C3B5',
+  softBorder: '#EFE7E1',
+  success: '#5B7065',
+  successSoft: '#EBF0ED',
+  warning: '#B85A32',
+  warningSoft: '#FBECE6',
+  purple: '#6B5B52',
+  purpleSoft: '#EFE7E1',
+  danger: '#C94A4A',
+  dangerSoft: '#FDECEC',
   white: '#FFFFFF',
   transparent: 'transparent',
 };
 
 export const COLOR_THEMES = [
   {
-    id: 'sage-rosegold',
-    name: 'Sage & Rose Gold',
+    id: 'cashmere-sage-copper',
+    name: 'Cashmere, Muted Sage & Antique Copper (60-30-10)',
     colors: {
-      primary: '#2F4336',
-      background: '#FAF9F6',
-      accent: '#B76E79',
-      lightBackground: '#FFFFFF',
-      muted: '#6B8E7B',
-      accentSoft: '#F8ECEE',
-      accentLight: '#E8C5CA',
-    },
-  },
-  {
-    id: 'deep-teal-ivory-bronze',
-    name: 'Deep Teal',
-    colors: {
-      primary: '#123C3A',
-      background: '#F7F2E8',
-      accent: '#B9824A',
-      lightBackground: '#FFFBF3',
-      muted: '#6F7F7B',
-      accentSoft: '#EFE2D2',
-      accentLight: '#E7CBAA',
-    },
-  },
-  {
-    id: 'burgundy-beige-charcoal',
-    name: 'Burgundy',
-    colors: {
-      primary: '#2F2F2F',
-      background: '#F4EDE4',
-      accent: '#6B1F2B',
-      lightBackground: '#FBF6EF',
-      muted: '#74665E',
-      accentSoft: '#EFE0E2',
-      accentLight: '#E7C6CC',
-    },
-  },
-  {
-    id: 'forest-cream-gold',
-    name: 'Forest Gold',
-    colors: {
-      primary: '#244A3A',
-      background: '#FFF9F0',
-      accent: '#C8A35F',
-      lightBackground: '#FFFCF7',
-      muted: '#6B776F',
-      accentSoft: '#F4EAD4',
-      accentLight: '#EBD59F',
-    },
-  },
-  {
-    id: 'slate-warm-copper',
-    name: 'Slate Copper',
-    colors: {
-      primary: '#34495E',
-      background: '#FAF7F2',
-      accent: '#B87333',
-      lightBackground: '#FFFFFF',
-      muted: '#6D7780',
-      accentSoft: '#EFE2D6',
-      accentLight: '#E7C7A6',
+      // 60% Dominant Base Canvas: Cashmere / Warm Taupe (#F7F4F0 / #FAF7F4)
+      background: '#F7F4F0',
+      lightBackground: '#FAF7F4',
+      card: '#FFFFFF',
+      
+      // 30% Secondary Structure: Muted Sage (#4A5D52 / #5B7065 / #37473E)
+      primary: '#37473E',
+      secondary: '#4A5D52',
+      muted: '#7A8C82',
+      
+      // 10% Accent Callouts: Antique Copper (#B85A32 / #C86940 / #FBECE6)
+      accent: '#B85A32',
+      accentSecondary: '#C86940',
+      accentSoft: '#FBECE6',
+      accentLight: '#F7D9CC',
     },
   },
 ];
@@ -97,6 +53,7 @@ export function applyTheme(themeId) {
   };
   return selected;
 }
+
 
 export function rgba(hex, alpha) {
   const value = hex.replace('#', '');

@@ -162,6 +162,7 @@ export default function App() {
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [cardSize, setCardSize] = useState('big');
+  const [userViewMode, setUserViewMode] = useState('list');
   const [paidColor, setPaidColor] = useState('#DCFCE7');
   const [parcelColor, setParcelColor] = useState('#FEF08A');
   const [selectedThemeId, setSelectedThemeId] = useState(COLOR_THEMES[0].id);
@@ -335,7 +336,7 @@ export default function App() {
       <Animated.View style={[styles.splashContainer, { opacity: splashFade, transform: [{ scale: splashScale }] }]}>
         <StatusBar style="light" />
         <LinearGradient
-          colors={['#24382C', '#1E2F25', '#16241C']}
+          colors={[theme.colors.primary, theme.colors.secondary, '#1E0A45']}
           style={styles.splashBg}
         >
           <SafeAreaView style={styles.splashSafeArea}>
@@ -357,26 +358,41 @@ export default function App() {
     return (
       <SafeAreaView style={styles.cleanLoginSafe}>
         <StatusBar style="dark" />
+        
+        {/* Ambient Mesh Background Glowing Glass Orbs */}
+        <View style={styles.ambientMeshContainer} pointerEvents="none">
+          <LinearGradient
+            colors={['#FAF5FF', '#FFFFFF', '#FFFBEB']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={styles.loginOrb1} />
+          <View style={styles.loginOrb2} />
+          <View style={styles.loginOrb3} />
+        </View>
+
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.cleanLoginKeyboard}>
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={styles.cleanLoginScroll}>
 
-            {/* Top Branding Section */}
+            {/* Top Branding Section (Clean Typography without fork/knife logo) */}
             <Animated.View style={[styles.cleanLoginHeader, { opacity: loginCardAnim, transform: [{ translateY: Animated.add(loginCardAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }), keyboardLiftAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -18] })) }] }]}>
               <Text style={styles.cleanBrandTitle}>ANAND</Text>
-              <Text style={styles.cleanBrandSub}>RESTAURANT</Text>
+              <Text style={styles.cleanBrandSub}>RESTAURANT SLIPS</Text>
+              <Text style={styles.cleanTagline}>Sign in to manage cashier slips & analytics</Text>
             </Animated.View>
 
-            {/* Form Container */}
+            {/* Glassmorphic Form Card Container */}
             <Animated.View style={[styles.cleanFormContainer, { opacity: loginCardAnim, transform: [{ translateY: Animated.add(loginCardAnim.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }), keyboardLiftAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -18] })) }] }]}>
 
               {/* Username Input Field */}
               <View style={styles.cleanInputGroup}>
                 <Text style={styles.cleanLabel}>Username</Text>
                 <View style={styles.cleanInputWrap}>
-                  <Ionicons name="person-outline" size={19} color="#B76E79" style={styles.cleanInputIcon} />
+                  <Ionicons name="person-outline" size={19} color={theme.colors.secondary} style={styles.cleanInputIcon} />
                   <TextInput
                     placeholder="Enter username"
-                    placeholderTextColor="#9AAFA3"
+                    placeholderTextColor="#94A3B8"
                     value={username}
                     onChangeText={setUsername}
                     autoCapitalize="none"
@@ -389,17 +405,17 @@ export default function App() {
               <View style={styles.cleanInputGroup}>
                 <Text style={styles.cleanLabel}>Password</Text>
                 <View style={styles.cleanInputWrap}>
-                  <Ionicons name="lock-closed-outline" size={19} color="#B76E79" style={styles.cleanInputIcon} />
+                  <Ionicons name="lock-closed-outline" size={19} color={theme.colors.secondary} style={styles.cleanInputIcon} />
                   <TextInput
                     placeholder="Enter password"
-                    placeholderTextColor="#9AAFA3"
+                    placeholderTextColor="#94A3B8"
                     secureTextEntry={!passwordVisible}
                     value={password}
                     onChangeText={setPassword}
                     style={styles.cleanTextInput}
                   />
                   <Pressable onPress={() => setPasswordVisible((visible) => !visible)} style={styles.cleanEyeBtn}>
-                    <Ionicons name={passwordVisible ? 'eye-outline' : 'eye-off-outline'} size={20} color="#B76E79" />
+                    <Ionicons name={passwordVisible ? 'eye-outline' : 'eye-off-outline'} size={20} color={theme.colors.secondary} />
                   </Pressable>
                 </View>
               </View>
@@ -410,17 +426,17 @@ export default function App() {
                   <View style={[styles.cleanRememberBox, rememberMe && styles.cleanRememberBoxOn]}>
                     {rememberMe ? <Ionicons name="checkmark" size={13} color="#FFFFFF" /> : null}
                   </View>
-                  <Text style={styles.cleanRememberText}>Remember me</Text>
+                  <Text style={styles.cleanRememberText}>Remember login</Text>
                 </Pressable>
               </View>
 
-              {/* Rose Gold Action Button */}
+              {/* Primary Action Button */}
               <Pressable disabled={loading} onPress={login} style={({ pressed }) => [styles.cleanSubmitBtn, pressed && styles.cleanSubmitBtnPressed, loading && styles.disabled]}>
                 {loading ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
                   <View style={styles.cleanBtnContent}>
-                    <Text style={styles.cleanSubmitText}>LOG IN</Text>
+                    <Text style={styles.cleanSubmitText}>SIGN IN TO APP</Text>
                     <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
                   </View>
                 )}
@@ -456,20 +472,23 @@ export default function App() {
             <Text style={styles.noteBtnText}>Note</Text>
           </Pressable>
         </View>
+        <View style={{ flex: 1 }}>
+          {session.issuperadmin && tab === 'dashboard' ? (
+            <SuperAdminDashboard session={session} onNavigate={(target) => setTab(target)} />
+          ) : tab === 'users' && session.issuperadmin ? (
+            <UsersPage session={session} userViewMode={userViewMode} />
+          ) : (
+            <SlipPage session={session} cardSize={cardSize} paidColor={paidColor} parcelColor={parcelColor} />
+          )}
+        </View>
+
         {session.issuperadmin ? (
-          <View style={styles.slimTabs}>
+          <View style={styles.floatingBottomNav}>
             <Tab active={tab === 'dashboard'} icon="analytics-outline" label="Dashboard" onPress={() => setTab('dashboard')} />
             <Tab active={tab === 'slip'} icon="receipt-outline" label="Slips" onPress={() => setTab('slip')} />
             <Tab active={tab === 'users'} icon="people-outline" label="Users" onPress={() => setTab('users')} />
           </View>
         ) : null}
-        {session.issuperadmin && tab === 'dashboard' ? (
-          <SuperAdminDashboard session={session} onNavigate={(target) => setTab(target)} />
-        ) : tab === 'users' && session.issuperadmin ? (
-          <UsersPage session={session} />
-        ) : (
-          <SlipPage session={session} cardSize={cardSize} paidColor={paidColor} parcelColor={parcelColor} />
-        )}
       </View>
       <Modal animationType="slide" transparent visible={noteOpen} onRequestClose={() => setNoteOpen(false)}>
         <Pressable style={styles.overlay} onPress={() => setNoteOpen(false)}><Pressable style={styles.drawer} onPress={(event) => event.stopPropagation()}>
@@ -511,70 +530,51 @@ export default function App() {
                 </View>
               </View>
 
-              {/* Card Grid Size Selector */}
-              <Text style={styles.profileSectionLabel}>Card Grid Size</Text>
-              <View style={styles.sizeOptionsRow}>
+              {/* Card Grid View Switch Toggle */}
+              <View style={styles.gridSwitchRow}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={styles.gridSwitchTitle}>Compact 4-Column Grid</Text>
+                  <Text style={styles.gridSwitchSub}>{cardSize === 'small' ? 'Showing 4 slips per row' : 'Showing 3 slips per row (Standard)'}</Text>
+                </View>
                 <Pressable
                   onPress={async () => {
-                    setCardSize('big');
-                    await SecureStore.setItemAsync(CARD_SIZE_KEY, 'big');
+                    const newSize = cardSize === 'small' ? 'big' : 'small';
+                    setCardSize(newSize);
+                    await SecureStore.setItemAsync(CARD_SIZE_KEY, newSize);
                   }}
-                  style={[styles.sizeBtn, cardSize === 'big' && styles.sizeBtnActive]}
+                  style={[styles.switchTrack, cardSize === 'small' && styles.switchTrackOn]}
                 >
-                  <Ionicons name="grid" size={16} color={cardSize === 'big' ? '#FFFFFF' : '#4D6E5B'} style={{ marginRight: 6 }} />
-                  <Text style={[styles.sizeBtnText, cardSize === 'big' && styles.sizeBtnTextActive]}>3 in Row (Big)</Text>
-                </Pressable>
-                <Pressable
-                  onPress={async () => {
-                    setCardSize('small');
-                    await SecureStore.setItemAsync(CARD_SIZE_KEY, 'small');
-                  }}
-                  style={[styles.sizeBtn, cardSize === 'small' && styles.sizeBtnActive]}
-                >
-                  <Ionicons name="keypad" size={16} color={cardSize === 'small' ? '#FFFFFF' : '#4D6E5B'} style={{ marginRight: 6 }} />
-                  <Text style={[styles.sizeBtnText, cardSize === 'small' && styles.sizeBtnTextActive]}>4 in Row (Small)</Text>
+                  <View style={[styles.switchThumb, cardSize === 'small' && styles.switchThumbOn]}>
+                    <Ionicons
+                      name={cardSize === 'small' ? 'keypad' : 'grid-outline'}
+                      size={12}
+                      color={cardSize === 'small' ? theme.colors.accent : '#7A8C82'}
+                    />
+                  </View>
                 </Pressable>
               </View>
 
-              {/* Paid Color Option */}
-              <Text style={styles.profileSectionLabel}>Paid Status Color</Text>
-              <View style={styles.colorSwatchesRow}>
-                {PAID_COLOR_OPTIONS.map((opt) => {
-                  const active = paidColor === opt.value;
-                  return (
-                    <Pressable
-                      key={opt.value}
-                      onPress={async () => {
-                        setPaidColor(opt.value);
-                        await SecureStore.setItemAsync(PAID_COLOR_KEY, opt.value);
-                      }}
-                      style={[styles.colorSwatch, { backgroundColor: opt.value }, active && styles.colorSwatchActive]}
-                    >
-                      {active ? <Ionicons name="checkmark" size={18} color="#2F4336" /> : null}
-                    </Pressable>
-                  );
-                })}
-              </View>
-
-              {/* Parcel Color Option */}
-              <Text style={styles.profileSectionLabel}>Parcel Pending Color</Text>
-              <View style={styles.colorSwatchesRow}>
-                {PARCEL_COLOR_OPTIONS.map((opt) => {
-                  const active = parcelColor === opt.value;
-                  return (
-                    <Pressable
-                      key={opt.value}
-                      onPress={async () => {
-                        setParcelColor(opt.value);
-                        await SecureStore.setItemAsync(PARCEL_COLOR_KEY, opt.value);
-                      }}
-                      style={[styles.colorSwatch, { backgroundColor: opt.value }, active && styles.colorSwatchActive]}
-                    >
-                      {active ? <Ionicons name="checkmark" size={18} color="#2F4336" /> : null}
-                    </Pressable>
-                  );
-                })}
-              </View>
+              {/* User Page Layout Switch Toggle (Exclusive for Superadmin) */}
+              {session.issuperadmin ? (
+                <View style={styles.gridSwitchRow}>
+                  <View style={{ flex: 1, paddingRight: 10 }}>
+                    <Text style={styles.gridSwitchTitle}>User Page Kanban Cards</Text>
+                    <Text style={styles.gridSwitchSub}>{userViewMode === 'kanban' ? 'Showing user cards (Grid layout)' : 'Showing user list (Clean layout)'}</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setUserViewMode((prev) => (prev === 'list' ? 'kanban' : 'list'))}
+                    style={[styles.switchTrack, userViewMode === 'kanban' && styles.switchTrackOn]}
+                  >
+                    <View style={[styles.switchThumb, userViewMode === 'kanban' && styles.switchThumbOn]}>
+                      <Ionicons
+                        name={userViewMode === 'kanban' ? 'grid' : 'list-outline'}
+                        size={12}
+                        color={userViewMode === 'kanban' ? theme.colors.accent : '#7A8C82'}
+                      />
+                    </View>
+                  </Pressable>
+                </View>
+              ) : null}
 
               {/* Relocated Logout Button */}
               <Pressable
@@ -620,6 +620,99 @@ function Tab({ active, icon, label, onPress }) {
   );
 }
 
+function CustomCalendar({ selectedDate, onSelectDate, activeTab = 'date1', compareDate }) {
+  const [viewDate, setViewDate] = useState(() => {
+    if (selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+      const parts = selectedDate.split('-');
+      return new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
+    }
+    return new Date();
+  });
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+  const firstDayIndex = new Date(year, month, 1).getDay();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+
+  function prevMonth() {
+    setViewDate(new Date(year, month - 1, 1));
+  }
+
+  function nextMonth() {
+    setViewDate(new Date(year, month + 1, 1));
+  }
+
+  const calendarCells = [];
+  for (let i = 0; i < firstDayIndex; i++) {
+    calendarCells.push(null);
+  }
+  for (let d = 1; d <= totalDays; d++) {
+    const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    calendarCells.push({ day: d, dateStr: formattedDate });
+  }
+
+  return (
+    <View style={styles.customCalContainer}>
+      {/* Month & Year Header Navigation */}
+      <View style={styles.customCalHeader}>
+        <Pressable onPress={prevMonth} style={styles.customCalNavBtn} hitSlop={10}>
+          <Ionicons name="chevron-back" size={18} color={theme.colors.primary} />
+        </Pressable>
+        <Text style={styles.customCalMonthTitle}>{monthNames[month]} {year}</Text>
+        <Pressable onPress={nextMonth} style={styles.customCalNavBtn} hitSlop={10}>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} />
+        </Pressable>
+      </View>
+
+      {/* Week Day Labels */}
+      <View style={styles.customCalDaysRow}>
+        {dayLabels.map((label, idx) => (
+          <Text key={idx} style={styles.customCalDayLabel}>{label}</Text>
+        ))}
+      </View>
+
+      {/* Grid of Days */}
+      <View style={styles.customCalGrid}>
+        {calendarCells.map((cell, idx) => {
+          if (!cell) {
+            return <View key={idx} style={styles.customCalCellEmpty} />;
+          }
+
+          const isSelected = cell.dateStr === selectedDate;
+          const isCompare = cell.dateStr === compareDate;
+          const isDate1Active = activeTab === 'date1';
+
+          return (
+            <Pressable
+              key={idx}
+              onPress={() => onSelectDate(cell.dateStr)}
+              style={[
+                styles.customCalCell,
+                isSelected && (isDate1Active ? styles.customCalCellActive1 : styles.customCalCellActive2),
+                isCompare && !isSelected && styles.customCalCellCompare,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.customCalCellText,
+                  isSelected && styles.customCalCellTextActive,
+                  isCompare && !isSelected && styles.customCalCellTextCompare,
+                ]}
+              >
+                {cell.day}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 function SuperAdminDashboard({ session, onNavigate }) {
   const [graphPeriod, setGraphPeriod] = useState('weekly'); // 'weekly' | 'monthly' | 'yearly'
   const [chartType, setChartType] = useState('line'); // 'line' | 'bar'
@@ -629,6 +722,7 @@ function SuperAdminDashboard({ session, onNavigate }) {
   const [customVal1, setCustomVal1] = useState(0);
   const [customVal2, setCustomVal2] = useState(0);
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [calActiveTab, setCalActiveTab] = useState('date1'); // 'date1' | 'date2'
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editorsModalOpen, setEditorsModalOpen] = useState(false);
@@ -853,82 +947,43 @@ function SuperAdminDashboard({ session, onNavigate }) {
         )}
       </View>
 
-      {/* SLIP COMPLETION COMPARISONS WITH FILTER PILLS */}
-      <View style={{ marginTop: 22, marginBottom: 10 }}>
-        <Text style={styles.dashSectionTitle}>SLIP COMPLETION COMPARISONS</Text>
-
-        {/* Filter Pills Horizontal Scroll */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
-          {comparisons.map((c) => (
-            <Pressable
-              key={c.key}
-              onPress={() => setSelectedCompareKey(c.key)}
-              style={[styles.periodPill, selectedCompareKey === c.key && styles.periodPillActive, { paddingHorizontal: 12, height: 32, justifyContent: 'center' }]}
-            >
-              <Text style={[styles.periodPillText, selectedCompareKey === c.key && styles.periodPillTextActive]}>
-                {c.key === 'monday' ? 'Mon vs Mon' : c.key === 'week' ? 'Week vs Week' : c.key === 'month' ? 'Month vs Month' : c.key === 'month_ly' ? 'Month vs Last Year' : 'Today vs Last Year'}
-              </Text>
-            </Pressable>
-          ))}
-          <Pressable
-            onPress={() => setSelectedCompareKey('custom')}
-            style={[styles.periodPill, selectedCompareKey === 'custom' && styles.periodPillActive, { paddingHorizontal: 12, height: 32, justifyContent: 'center', backgroundColor: selectedCompareKey === 'custom' ? '#B76E79' : 'rgba(183, 110, 121, 0.12)' }]}
-          >
-            <Ionicons name="options-outline" size={13} color={selectedCompareKey === 'custom' ? '#FFFFFF' : '#B76E79'} style={{ marginRight: 4 }} />
-            <Text style={[styles.periodPillText, { color: selectedCompareKey === 'custom' ? '#FFFFFF' : '#B76E79' }]}>
-              Custom Comparison
-            </Text>
+      {/* SLIP COMPLETION CUSTOM COMPARISON SECTION */}
+      <View style={{ marginTop: 22, marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <Text style={styles.dashSectionTitle}>SLIP COMPLETION COMPARISON</Text>
+          <Pressable onPress={() => setShowCustomModal(true)} style={styles.customDateSelectBtn}>
+            <Ionicons name="calendar-outline" size={15} color={theme.colors.accent} />
+            <Text style={styles.customDateSelectText}>Select Dates</Text>
           </Pressable>
-        </ScrollView>
-      </View>
+        </View>
 
-      {/* ACTIVE COMPARISON CARD */}
-      {selectedCompareKey === 'custom' ? (
+        {/* CUSTOM COMPARISON DISPLAY CARD */}
         <View style={styles.compareCard}>
           <View style={styles.compareCardTop}>
-            <Text style={styles.compareTitle}>Custom Date Range Comparison</Text>
-            <Pressable onPress={() => setShowCustomModal(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="calendar-outline" size={16} color="#B76E79" />
-              <Text style={{ color: '#B76E79', fontSize: 12, fontWeight: '800' }}>Select Dates</Text>
-            </Pressable>
+            <Text style={styles.compareTitle}>Date Range Comparison</Text>
+            {customVal1 !== customVal2 ? (
+              <View style={[styles.compareBadge, customVal1 >= customVal2 ? styles.compareBadgePos : styles.compareBadgeNeg]}>
+                <Ionicons name={customVal1 >= customVal2 ? 'trending-up' : 'trending-down'} size={12} color={customVal1 >= customVal2 ? '#10B981' : '#EF4444'} />
+                <Text style={[styles.compareBadgeText, customVal1 >= customVal2 ? styles.compareBadgeTextPos : styles.compareBadgeTextNeg]}>
+                  {customVal2 > 0 ? `${(((customVal1 - customVal2) / customVal2) * 100).toFixed(1)}%` : 'New'}
+                </Text>
+              </View>
+            ) : null}
           </View>
+
           <View style={styles.compareDataRow}>
             <View style={styles.compareCol}>
-              <Text style={styles.compareColLabel}>PERIOD 1 ({customDate1})</Text>
+              <Text style={styles.compareColLabel}>DATE 1 ({customDate1})</Text>
               <Text style={styles.compareColVal}>{customVal1} slips</Text>
             </View>
             <View style={styles.compareDivider} />
             <View style={styles.compareCol}>
-              <Text style={styles.compareColLabel}>PERIOD 2 ({customDate2})</Text>
+              <Text style={styles.compareColLabel}>DATE 2 ({customDate2})</Text>
               <Text style={styles.compareColValMuted}>{customVal2} slips</Text>
             </View>
           </View>
         </View>
-      ) : activeComparison ? (
-        <View style={styles.compareCard}>
-          <View style={styles.compareCardTop}>
-            <Text style={styles.compareTitle}>{activeComparison.title}</Text>
-            <View style={[styles.compareBadge, activeComparison.positive ? styles.compareBadgePos : styles.compareBadgeNeg]}>
-              <Ionicons name={activeComparison.positive ? 'trending-up' : 'trending-down'} size={12} color={activeComparison.positive ? '#16A34A' : '#DC2626'} />
-              <Text style={[styles.compareBadgeText, activeComparison.positive ? styles.compareBadgeTextPos : styles.compareBadgeTextNeg]}>
-                {activeComparison.badge}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.compareDataRow}>
-            <View style={styles.compareCol}>
-              <Text style={styles.compareColLabel}>CURRENT</Text>
-              <Text style={styles.compareColVal}>{activeComparison.current}</Text>
-            </View>
-            <View style={styles.compareDivider} />
-            <View style={styles.compareCol}>
-              <Text style={styles.compareColLabel}>PREVIOUS</Text>
-              <Text style={styles.compareColValMuted}>{activeComparison.previous}</Text>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      </View>
 
       </ScrollView>
 
@@ -977,22 +1032,75 @@ function SuperAdminDashboard({ session, onNavigate }) {
         <Pressable style={styles.overlay} onPress={() => setShowCustomModal(false)}>
           <Pressable style={styles.drawer} onPress={(event) => event.stopPropagation()}>
             <View style={styles.drawerHead}>
-              <View>
+              <View style={{ flex: 1, paddingRight: 10 }}>
                 <Text style={styles.kicker}>CUSTOM COMPARISON</Text>
-                <Text style={styles.drawerTitle}>Select 2 Dates to Compare</Text>
+                <Text style={styles.drawerTitle} numberOfLines={1}>Select 2 Dates</Text>
               </View>
               <Pressable onPress={() => setShowCustomModal(false)} hitSlop={12} style={styles.cleanCloseIconButton}>
-                <Ionicons name="close-circle-outline" size={26} color="#6B8E7B" />
+                <Ionicons name="close-circle-outline" size={26} color={theme.colors.muted} />
               </Pressable>
             </View>
 
-            <View style={{ gap: 14, paddingVertical: 10 }}>
-              <Field label="Date 1 (YYYY-MM-DD)" value={customDate1} onChangeText={setCustomDate1} placeholder="YYYY-MM-DD" />
-              <Field label="Date 2 (YYYY-MM-DD)" value={customDate2} onChangeText={setCustomDate2} placeholder="YYYY-MM-DD" />
-              <Pressable onPress={loadCustomComparison} style={styles.noteSaveBtn}>
+            <ScrollView contentContainerStyle={{ gap: 14, paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
+              {/* Dual Segmented Control Toggle (Date 1 vs Date 2) */}
+              <View style={styles.calSegmentContainer}>
+                <Pressable
+                  onPress={() => setCalActiveTab('date1')}
+                  style={[styles.calSegmentBtn, calActiveTab === 'date1' && styles.calSegmentBtnActive1]}
+                >
+                  <Ionicons name="calendar" size={15} color={calActiveTab === 'date1' ? '#FFFFFF' : theme.colors.accent} />
+                  <View style={{ alignItems: 'flex-start' }}>
+                    <Text style={[styles.calSegmentTitle, calActiveTab === 'date1' && styles.calSegmentTextActive]}>DATE 1</Text>
+                    <Text style={[styles.calSegmentVal, calActiveTab === 'date1' && styles.calSegmentTextActive]}>{customDate1}</Text>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setCalActiveTab('date2')}
+                  style={[styles.calSegmentBtn, calActiveTab === 'date2' && styles.calSegmentBtnActive2]}
+                >
+                  <Ionicons name="calendar-outline" size={15} color={calActiveTab === 'date2' ? '#FFFFFF' : theme.colors.primary} />
+                  <View style={{ alignItems: 'flex-start' }}>
+                    <Text style={[styles.calSegmentTitle, calActiveTab === 'date2' && styles.calSegmentTextActive]}>DATE 2</Text>
+                    <Text style={[styles.calSegmentVal, calActiveTab === 'date2' && styles.calSegmentTextActive]}>{customDate2}</Text>
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* Direct Keyboard Input Fallback */}
+              <View style={styles.calDirectWrap}>
+                <Ionicons name="create-outline" size={16} color={theme.colors.muted} style={{ marginLeft: 10 }} />
+                <TextInput
+                  placeholder="YYYY-MM-DD (e.g. 2026-09-27)"
+                  placeholderTextColor={theme.colors.placeholder}
+                  value={calActiveTab === 'date1' ? customDate1 : customDate2}
+                  onChangeText={(val) => {
+                    if (calActiveTab === 'date1') setCustomDate1(val);
+                    else setCustomDate2(val);
+                  }}
+                  style={styles.calDirectInput}
+                />
+              </View>
+
+              {/* 100% Theme-Matched Custom Calendar Component */}
+              <CustomCalendar
+                selectedDate={calActiveTab === 'date1' ? customDate1 : customDate2}
+                compareDate={calActiveTab === 'date1' ? customDate2 : customDate1}
+                activeTab={calActiveTab}
+                onSelectDate={(dateStr) => {
+                  if (calActiveTab === 'date1') {
+                    setCustomDate1(dateStr);
+                    setCalActiveTab('date2'); // Smooth auto-switch to Date 2 selection
+                  } else {
+                    setCustomDate2(dateStr);
+                  }
+                }}
+              />
+
+              <Pressable onPress={loadCustomComparison} style={[styles.noteSaveBtn, { width: '100%', marginTop: 6 }]}>
                 <Text style={styles.noteSaveText}>Compare Slips</Text>
               </Pressable>
-            </View>
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -1160,11 +1268,11 @@ function SlipPage({ session, cardSize, paidColor, parcelColor }) {
             <DateTimePicker
               display="calendar"
               maximumDate={new Date()}
-              minimumDate={new Date()}
               mode="date"
-              onChange={(event, selectedDate) => {
+              onDismiss={() => setShowDatePicker(false)}
+              onValueChange={(selectedDate) => {
                 setShowDatePicker(false);
-                if (event.type === 'set' && selectedDate) {
+                if (selectedDate) {
                   setBillDate(selectedDate.toISOString().slice(0, 10));
                 }
               }}
@@ -1426,10 +1534,10 @@ function ParcelList({ busy, parcelFilter, setParcelFilter, updateBill, visiblePa
   </View></ScrollView>;
 }
 
-function UsersPage({ session }) {
+function UsersPage({ session, userViewMode = 'list' }) {
   const emptyForm = { name: '', username: '', password: '', issuperadmin: false, isActive: true };
   const [users, setUsers] = useState([]);
-  const [userViewMode, setUserViewMode] = useState('list'); // 'list' | 'kanban'
+  const [activeUserMenu, setActiveUserMenu] = useState(null); // id of user whose menu is open
   const [form, setForm] = useState(emptyForm);
   const [editingUser, setEditingUser] = useState(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -1531,22 +1639,6 @@ function UsersPage({ session }) {
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {/* View Mode Toggle: List vs Kanban */}
-          <View style={styles.periodPillRow}>
-            <Pressable
-              onPress={() => setUserViewMode('list')}
-              style={[styles.periodPill, userViewMode === 'list' && styles.periodPillActive]}
-            >
-              <Ionicons name="list-outline" size={14} color={userViewMode === 'list' ? '#FFFFFF' : '#4D6E5B'} />
-            </Pressable>
-            <Pressable
-              onPress={() => setUserViewMode('kanban')}
-              style={[styles.periodPill, userViewMode === 'kanban' && styles.periodPillActive]}
-            >
-              <Ionicons name="grid-outline" size={14} color={userViewMode === 'kanban' ? '#FFFFFF' : '#4D6E5B'} />
-            </Pressable>
-          </View>
-
           <Pressable onPress={openAddPanel} style={styles.addUserBtn}>
             <Text style={styles.addUserText}>Add</Text>
           </Pressable>
@@ -1559,38 +1651,79 @@ function UsersPage({ session }) {
       {/* RENDER LIST VIEW OR KANBAN GRID VIEW */}
       {userViewMode === 'list' ? (
         <View style={styles.userListWrap}>
-          {users.map((user) => (
-            <View style={styles.userListRow} key={user.id}>
-              <View style={[styles.userAvatar, !user.isActive && styles.userAvatarOff]}>
-                <Text style={styles.userAvatarText}>{user.name.slice(0, 1).toUpperCase()}</Text>
-              </View>
+          {users.map((user) => {
+            const menuOpen = activeUserMenu === user.id;
+            return (
+              <View style={styles.userCleanListCard} key={user.id}>
+                <View style={styles.userCleanListMain}>
+                  {/* Avatar & Left Info: Name & Username */}
+                  <View style={styles.userCleanLeft}>
+                    <View style={[styles.userAvatar, !user.isActive && styles.userAvatarOff]}>
+                      <Text style={styles.userAvatarText}>{user.name.slice(0, 1).toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.userCleanName} numberOfLines={1}>{user.name}</Text>
+                      <Text style={styles.userCleanUsername} numberOfLines={1}>@{user.username}</Text>
+                    </View>
+                  </View>
 
-              <View style={{ flex: 1, minWidth: 0, marginHorizontal: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[styles.userName, { flexShrink: 1 }]} numberOfLines={1}>{user.name}</Text>
-                  <View style={styles.userBadge}>
-                    <Text style={styles.userBadgeText}>{user.issuperadmin ? 'Super' : 'Admin'}</Text>
+                  {/* Far Right: Role Badge & 3-dots Menu Button */}
+                  <View style={styles.userCleanRight}>
+                    <View style={styles.userBadge}>
+                      <Text style={styles.userBadgeText}>{user.issuperadmin ? 'Superadmin' : 'Admin'}</Text>
+                    </View>
+                    <View style={[styles.userStatusDot, user.isActive ? styles.userStatusDotOn : styles.userStatusDotOff]} />
+
+                    <Pressable
+                      onPress={() => setActiveUserMenu((prev) => (prev === user.id ? null : user.id))}
+                      style={styles.userMenuBtn}
+                      hitSlop={8}
+                    >
+                      <Ionicons name={menuOpen ? 'chevron-up-circle' : 'ellipsis-vertical'} size={18} color={theme.colors.primary} />
+                    </Pressable>
                   </View>
                 </View>
-                <Text style={styles.userUsername} numberOfLines={1}>@{user.username}</Text>
-              </View>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={[styles.userStatus, user.isActive ? styles.userStatusOn : styles.userStatusOff, { marginVertical: 0, paddingHorizontal: 6, fontSize: 10 }]}>
-                  {user.isActive ? 'Active' : 'Inactive'}
-                </Text>
-                <Pressable onPress={() => openEditPanel(user)} style={styles.userListActionBtn}>
-                  <Ionicons name="pencil" size={13} color="#B76E79" />
-                </Pressable>
-                <Pressable onPress={() => toggleActive(user)} style={styles.userListActionBtn}>
-                  <Ionicons name={user.isActive ? 'pause-circle-outline' : 'play-circle-outline'} size={14} color="#4D6E5B" />
-                </Pressable>
-                <Pressable onPress={() => confirmDelete(user)} style={[styles.userListActionBtn, { backgroundColor: 'rgba(220, 38, 38, 0.10)' }]}>
-                  <Ionicons name="trash-outline" size={13} color="#DC2626" />
-                </Pressable>
+                {/* Dropdown Action Bar (Shows when 3-dots is toggled) */}
+                {menuOpen ? (
+                  <View style={styles.userDropdownBar}>
+                    <Pressable
+                      onPress={() => {
+                        setActiveUserMenu(null);
+                        openEditPanel(user);
+                      }}
+                      style={styles.userDropdownAction}
+                    >
+                      <Ionicons name="create-outline" size={15} color={theme.colors.primary} />
+                      <Text style={styles.userDropdownText}>Edit</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => {
+                        setActiveUserMenu(null);
+                        toggleActive(user);
+                      }}
+                      style={styles.userDropdownAction}
+                    >
+                      <Ionicons name={user.isActive ? 'pause-circle-outline' : 'play-circle-outline'} size={15} color={theme.colors.primary} />
+                      <Text style={styles.userDropdownText}>{user.isActive ? 'Pause / Inactive' : 'Activate'}</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() => {
+                        setActiveUserMenu(null);
+                        confirmDelete(user);
+                      }}
+                      style={[styles.userDropdownAction, styles.userDropdownActionDanger]}
+                    >
+                      <Ionicons name="trash-outline" size={15} color={theme.colors.danger} />
+                      <Text style={[styles.userDropdownText, { color: theme.colors.danger }]}>Delete</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       ) : (
         <View style={styles.userGrid}>
@@ -1888,7 +2021,7 @@ function createAppStyles(theme) {
     splashTitle: {
       fontSize: 40,
       fontWeight: '900',
-      color: '#F9F6F0',
+      color: '#FFFFFF',
       letterSpacing: 7,
       textTransform: 'uppercase',
       textAlign: 'center',
@@ -1897,7 +2030,7 @@ function createAppStyles(theme) {
     splashSubtitle: {
       fontSize: 16,
       fontWeight: '800',
-      color: '#B76E79',
+      color: theme.colors.accent,
       letterSpacing: 9,
       textTransform: 'uppercase',
       textAlign: 'center',
@@ -1909,151 +2042,200 @@ function createAppStyles(theme) {
     splashFooterText: {
       fontSize: 11,
       fontWeight: '800',
-      color: '#8CA697',
+      color: theme.colors.accentLight,
       letterSpacing: 4,
       textTransform: 'uppercase',
     },
-    cleanLoginSafe: { flex: 1, backgroundColor: '#FAF9F6' },
+    cleanLoginSafe: { flex: 1, backgroundColor: '#F7F4F0', position: 'relative' },
+    ambientMeshContainer: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+    loginOrb1: { position: 'absolute', top: -40, left: -40, width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(55, 71, 62, 0.12)' },
+    loginOrb2: { position: 'absolute', bottom: -60, right: -40, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(74, 93, 82, 0.08)' },
+    loginOrb3: { position: 'absolute', top: '38%', right: -60, width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(184, 90, 50, 0.07)' },
     cleanLoginKeyboard: { flex: 1 },
-    cleanLoginScroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 26, paddingVertical: 36 },
-    cleanLoginHeader: { alignItems: 'center', marginBottom: 32 },
-    cleanBrandTitle: { fontSize: 36, fontWeight: '900', color: '#2F4336', letterSpacing: 7, textTransform: 'uppercase', textAlign: 'center' },
-    cleanBrandSub: { fontSize: 14, fontWeight: '800', color: '#4D6E5B', letterSpacing: 8, textTransform: 'uppercase', textAlign: 'center', marginTop: 2 },
-    cleanTagline: { fontSize: 13, fontWeight: '600', color: '#6B8E7B', textAlign: 'center', marginTop: 10, letterSpacing: 0.5 },
-    cleanFormContainer: { width: '100%' },
-    cleanSegment: { flexDirection: 'row', backgroundColor: '#EFF3F0', borderRadius: 14, padding: 4, marginBottom: 24, borderWidth: 1, borderColor: '#D8E2DC' },
+    cleanLoginScroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 22, paddingVertical: 36 },
+    cleanLoginHeader: { alignItems: 'center', marginBottom: 28 },
+    cleanBrandTitle: { fontSize: 34, fontWeight: '900', color: theme.colors.primary, letterSpacing: 6, textTransform: 'uppercase', textAlign: 'center' },
+    cleanBrandSub: { fontSize: 13, fontWeight: '800', color: theme.colors.accent, letterSpacing: 7, textTransform: 'uppercase', textAlign: 'center', marginTop: 3 },
+    cleanTagline: { fontSize: 13, fontWeight: '600', color: theme.colors.muted, textAlign: 'center', marginTop: 8, letterSpacing: 0.2 },
+    cleanFormContainer: { width: '100%', backgroundColor: '#FFFFFF', borderRadius: 24, padding: 22, borderWidth: 1.5, borderColor: '#D8C3B5', shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 6 },
+    cleanSegment: { flexDirection: 'row', backgroundColor: '#F7F4F0', borderRadius: 14, padding: 4, marginBottom: 24, borderWidth: 1, borderColor: '#EFE7E1' },
     cleanSegmentBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, borderRadius: 10 },
-    cleanSegmentActive: { backgroundColor: '#B76E79' },
-    cleanSegmentText: { fontSize: 14, fontWeight: '800', color: '#4D6E5B' },
+    cleanSegmentActive: { backgroundColor: theme.colors.primary },
+    cleanSegmentText: { fontSize: 14, fontWeight: '800', color: theme.colors.muted },
     cleanSegmentTextActive: { color: '#FFFFFF' },
-    cleanInputGroup: { marginBottom: 20 },
-    cleanLabel: { fontSize: 13, fontWeight: '700', color: '#2F4336', marginBottom: 7 },
-    cleanInputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#DCA2AC', height: 52, paddingHorizontal: 14 },
+    cleanInputGroup: { marginBottom: 18 },
+    cleanLabel: { fontSize: 13, fontWeight: '700', color: theme.colors.primary, marginBottom: 7 },
+    cleanInputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAF7F4', borderRadius: 14, borderWidth: 1.5, borderColor: '#D8C3B5', height: 52, paddingHorizontal: 14 },
     cleanInputIcon: { marginRight: 10 },
-    cleanTextInput: { flex: 1, color: '#2F4336', fontSize: 15, fontWeight: '600', height: '100%' },
+    cleanTextInput: { flex: 1, color: theme.colors.primary, fontSize: 15, fontWeight: '600', height: '100%' },
     cleanEyeBtn: { padding: 6, marginLeft: 6 },
-    cleanOptionsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 26, marginTop: 2 },
+    cleanOptionsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, marginTop: 2 },
     cleanRememberRow: { flexDirection: 'row', alignItems: 'center' },
-    cleanRememberBox: { width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: '#DCA2AC', alignItems: 'center', justifyContent: 'center', marginRight: 9, backgroundColor: '#FFFFFF' },
-    cleanRememberBoxOn: { backgroundColor: '#B76E79', borderColor: '#B76E79' },
-    cleanRememberText: { color: '#4D6E5B', fontSize: 13, fontWeight: '600' },
-    cleanSubmitBtn: { backgroundColor: '#2F4336', borderRadius: 14, height: 52, alignItems: 'center', justifyContent: 'center', marginTop: 6, shadowColor: '#2F4336', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.22, shadowRadius: 8, elevation: 3 },
+    cleanRememberBox: { width: 20, height: 20, borderRadius: 5, borderWidth: 1.5, borderColor: '#7A8C82', alignItems: 'center', justifyContent: 'center', marginRight: 9, backgroundColor: '#FFFFFF' },
+    cleanRememberBoxOn: { backgroundColor: theme.colors.secondary, borderColor: theme.colors.secondary },
+    cleanRememberText: { color: theme.colors.primary, fontSize: 13, fontWeight: '600' },
+    cleanSubmitBtn: { backgroundColor: theme.colors.primary, borderRadius: 16, height: 52, alignItems: 'center', justifyContent: 'center', marginTop: 6, shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 10, elevation: 4 },
     cleanSubmitBtnPressed: { opacity: 0.9, transform: [{ scale: 0.99 }] },
     cleanBtnContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-    cleanSubmitText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800', letterSpacing: 2 },
+    cleanSubmitText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', letterSpacing: 1.5 },
     cleanCloseIconButton: { padding: 4, alignItems: 'center', justifyContent: 'center' },
     profileHeaderBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 },
-    headerAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#2F4336', alignItems: 'center', justifyContent: 'center', shadowColor: '#2F4336', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 6, elevation: 3 },
+    headerAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.primary, alignItems: 'center', justifyContent: 'center', shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 6, elevation: 3 },
     headerAvatarText: { color: '#FFFFFF', fontSize: 17, fontWeight: '900' },
     cellSmall: { width: '23.2%', aspectRatio: 1.05, minHeight: 64, borderRadius: 14 },
     cellTextSmall: { fontSize: 21, lineHeight: 24 },
     cellTickWrapSmall: { top: 4, right: 5 },
     settingsHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-    settingsKicker: { color: '#B76E79', fontSize: 12, fontWeight: '900', letterSpacing: 1.5 },
-    sizeOptionsRow: { flexDirection: 'row', gap: 8, marginBottom: 18 },
-    sizeBtn: { flex: 1, flexDirection: 'row', height: 44, borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(47, 67, 54, 0.16)', backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-    sizeBtnActive: { backgroundColor: '#2F4336', borderColor: '#2F4336' },
-    sizeBtnText: { color: '#4D6E5B', fontSize: 12, fontWeight: '800' },
-    sizeBtnTextActive: { color: '#FFFFFF' },
+    settingsKicker: { color: theme.colors.accent, fontSize: 12, fontWeight: '900', letterSpacing: 1.5 },
+    gridSwitchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FAF7F4', padding: 14, borderRadius: 18, borderWidth: 1, borderColor: '#D8C3B5', marginBottom: 20 },
+    gridSwitchTitle: { fontSize: 14, fontWeight: '800', color: theme.colors.primary },
+    gridSwitchSub: { fontSize: 11, fontWeight: '600', color: theme.colors.muted, marginTop: 2 },
+    switchTrack: { width: 52, height: 28, borderRadius: 14, backgroundColor: '#D8C3B5', padding: 2, justifyContent: 'center' },
+    switchTrackOn: { backgroundColor: theme.colors.primary },
+    switchThumb: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', shadowColor: '#000000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 3, elevation: 2 },
+    switchThumbOn: { transform: [{ translateX: 24 }] },
     colorSwatchesRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
     colorSwatch: { width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: 'rgba(0,0,0,0.08)', alignItems: 'center', justifyContent: 'center' },
-    colorSwatchActive: { borderColor: '#2F4336', transform: [{ scale: 1.1 }] },
-    settingsLogoutBtn: { marginTop: 22, height: 50, borderRadius: 16, backgroundColor: '#B76E79', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: '#B76E79', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.22, shadowRadius: 10, elevation: 4 },
+    colorSwatchActive: { borderColor: theme.colors.accent, transform: [{ scale: 1.1 }] },
+    settingsLogoutBtn: { marginTop: 22, height: 50, borderRadius: 16, backgroundColor: theme.colors.danger, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: theme.colors.danger, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.22, shadowRadius: 10, elevation: 4 },
     settingsLogoutText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
-    summaryToggleBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(47, 67, 54, 0.12)', paddingHorizontal: 12, height: 42, marginBottom: 12 },
+    summaryToggleBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#D8C3B5', paddingHorizontal: 12, height: 42, marginBottom: 12 },
     summaryToggleBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    summaryToggleText: { fontSize: 13, fontWeight: '800', color: '#2F4336' },
-    compactDateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FAF9F6', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: 'rgba(183, 110, 121, 0.20)' },
-    compactDateText: { fontSize: 13, fontWeight: '800', color: '#B76E79' },
+    summaryToggleText: { fontSize: 13, fontWeight: '800', color: theme.colors.primary },
+    compactDateBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.accentSoft, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: theme.colors.accentLight },
+    compactDateText: { fontSize: 13, fontWeight: '800', color: theme.colors.accent },
     floatingLoadWrap: { position: 'absolute', bottom: 12, left: 0, right: 0, alignItems: 'center', justifyContent: 'center', pointerEvents: 'box-none' },
-    floatingLoadBtn: { height: 44, paddingHorizontal: 18, borderRadius: 22, backgroundColor: '#2F4336', flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: '#2F4336', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 10, elevation: 6, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.20)' },
+    floatingLoadBtn: { height: 44, paddingHorizontal: 18, borderRadius: 22, backgroundColor: theme.colors.accent, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: theme.colors.accent, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 10, elevation: 6, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.20)' },
     floatingLoadText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900', letterSpacing: 0.2 },
     readMoreBtn: { marginTop: 1, marginBottom: 4, paddingVertical: 1, paddingHorizontal: 4, flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
     readMoreBtnPressed: { opacity: 0.6 },
-    readMoreText: { color: '#2F4336', fontSize: 15, fontWeight: '900' },
-    slimTabs: { flexDirection: 'row', gap: 6, padding: 4, marginBottom: 12, borderRadius: 16, backgroundColor: 'rgba(47, 67, 54, 0.08)' },
-    slimTab: { flex: 1, minHeight: 36, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
-    slimTabActive: { backgroundColor: '#2F4336', shadowColor: '#2F4336', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.16, shadowRadius: 6, elevation: 2 },
-    slimTabText: { color: '#4D6E5B', fontSize: 13, fontWeight: '800' },
+    readMoreText: { color: theme.colors.primary, fontSize: 15, fontWeight: '900' },
+    floatingBottomNav: { flexDirection: 'row', gap: 6, padding: 6, marginHorizontal: 16, marginBottom: 12, borderRadius: 22, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#D8C3B5', shadowColor: '#37473E', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 8 },
+    slimTabs: { flexDirection: 'row', gap: 6, padding: 4, marginBottom: 12, borderRadius: 16, backgroundColor: '#EFE7E1' },
+    slimTab: { flex: 1, minHeight: 40, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
+    slimTabActive: { backgroundColor: theme.colors.accent, shadowColor: theme.colors.accent, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3 },
+    slimTabText: { color: '#7A8C82', fontSize: 13, fontWeight: '800' },
     slimTabTextActive: { color: '#FFFFFF' },
     dashContainer: { paddingBottom: 32 },
-    dashBanner: { padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(47, 67, 54, 0.12)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-    dashBannerSub: { color: '#B76E79', fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
-    dashBannerTitle: { color: '#2F4336', fontSize: 19, fontWeight: '900', marginTop: 2 },
-    dashLiveBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: 'rgba(22, 163, 74, 0.12)' },
-    dashLiveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#16A34A' },
-    dashLiveText: { color: '#16A34A', fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
+    dashBanner: { padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+    dashBannerSub: { color: theme.colors.accent, fontSize: 11, fontWeight: '900', letterSpacing: 1.2 },
+    dashBannerTitle: { color: theme.colors.primary, fontSize: 19, fontWeight: '900', marginTop: 2 },
+    dashLiveBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: 'rgba(16, 185, 129, 0.12)' },
+    dashLiveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' },
+    dashLiveText: { color: '#10B981', fontSize: 11, fontWeight: '900', letterSpacing: 0.8 },
     dashKpiGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12, marginBottom: 20 },
-    dashKpiCard: { width: '48.5%', padding: 14, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(47, 67, 54, 0.12)' },
-    dashKpiCardPrimary: { backgroundColor: '#FAF9F6', borderColor: '#2F4336', borderWidth: 1.5 },
+    dashKpiCard: { width: '48.5%', padding: 14, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 2 },
+    dashKpiCardPrimary: { backgroundColor: '#FFFFFF', borderColor: theme.colors.accent, borderWidth: 1.5 },
     dashKpiTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-    dashKpiLabel: { color: '#6B8E7B', fontSize: 12, fontWeight: '800' },
-    dashKpiIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(47, 67, 54, 0.08)', alignItems: 'center', justifyContent: 'center' },
-    dashKpiValue: { color: '#2F4336', fontSize: 21, fontWeight: '900' },
-    dashKpiTrend: { color: '#16A34A', fontSize: 11, fontWeight: '700', marginTop: 4 },
-    dashKpiHint: { color: '#6B8E7B', fontSize: 11, fontWeight: '700', marginTop: 4 },
-    dashSectionTitle: { color: '#2F4336', fontSize: 12, fontWeight: '900', letterSpacing: 1.2, marginBottom: 10 },
+    dashKpiLabel: { color: '#64748B', fontSize: 12, fontWeight: '800' },
+    dashKpiIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: theme.colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
+    dashKpiValue: { color: theme.colors.primary, fontSize: 21, fontWeight: '900' },
+    dashKpiTrend: { color: '#10B981', fontSize: 11, fontWeight: '700', marginTop: 4 },
+    dashKpiHint: { color: '#64748B', fontSize: 11, fontWeight: '700', marginTop: 4 },
+    dashSectionTitle: { color: theme.colors.primary, fontSize: 12, fontWeight: '900', letterSpacing: 1.2, marginBottom: 10 },
     dashNavRow: { gap: 10, marginBottom: 20 },
-    dashNavCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(47, 67, 54, 0.12)' },
+    dashNavCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
     dashNavCardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     dashNavIconBox: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-    dashNavTitle: { color: '#2F4336', fontSize: 15, fontWeight: '900' },
-    dashNavSub: { color: '#6B8E7B', fontSize: 12, fontWeight: '600', marginTop: 2 },
-    dashHighlightBox: { marginTop: 6, paddingTop: 4, borderTopWidth: 1, borderTopColor: 'rgba(47, 67, 54, 0.1)', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    dashHighlightLabel: { color: '#B76E79', fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
-    dashHighlightValue: { color: '#2F4336', fontSize: 11, fontWeight: '900' },
-    dashChartCard: { padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(47, 67, 54, 0.12)' },
+    dashNavTitle: { color: theme.colors.primary, fontSize: 15, fontWeight: '900' },
+    dashNavSub: { color: '#64748B', fontSize: 12, fontWeight: '600', marginTop: 2 },
+    dashHighlightBox: { marginTop: 6, paddingTop: 4, borderTopWidth: 1, borderTopColor: '#F1F5F9', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    dashHighlightLabel: { color: theme.colors.accent, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 },
+    dashHighlightValue: { color: theme.colors.primary, fontSize: 11, fontWeight: '900' },
+    dashChartCard: { padding: 16, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
     dashChartHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 },
-    dashChartTitle: { color: '#2F4336', fontSize: 13, fontWeight: '900', letterSpacing: 1.0 },
-    periodPillRow: { flexDirection: 'row', gap: 4, backgroundColor: 'rgba(47, 67, 54, 0.06)', padding: 3, borderRadius: 12 },
+    dashChartTitle: { color: theme.colors.primary, fontSize: 13, fontWeight: '900', letterSpacing: 1.0 },
+    periodPillRow: { flexDirection: 'row', gap: 4, backgroundColor: '#F1F5F9', padding: 3, borderRadius: 12 },
     periodPill: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 9, backgroundColor: 'transparent' },
-    periodPillActive: { backgroundColor: '#2F4336' },
-    periodPillText: { color: '#4D6E5B', fontSize: 11, fontWeight: '800' },
+    periodPillActive: { backgroundColor: theme.colors.primary },
+    periodPillText: { color: '#64748B', fontSize: 11, fontWeight: '800' },
     periodPillTextActive: { color: '#FFFFFF' },
     dashBarChart: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 135, paddingTop: 10 },
     dashBarCol: { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end' },
-    dashBarVal: { color: '#2F4336', fontSize: 10, fontWeight: '800', marginBottom: 4 },
-    dashBarTrack: { width: 14, height: '68%', backgroundColor: 'rgba(47, 67, 54, 0.08)', borderRadius: 7, overflow: 'hidden', justifyContent: 'flex-end' },
-    dashBarFill: { width: '100%', backgroundColor: '#2F4336', borderRadius: 7 },
-    dashBarLabel: { color: '#6B8E7B', fontSize: 10, fontWeight: '800', marginTop: 6 },
+    dashBarVal: { color: theme.colors.primary, fontSize: 10, fontWeight: '800', marginBottom: 4 },
+    dashBarTrack: { width: 14, height: '68%', backgroundColor: '#F1F5F9', borderRadius: 7, overflow: 'hidden', justifyContent: 'flex-end' },
+    dashBarFill: { width: '100%', backgroundColor: theme.colors.accent, borderRadius: 7 },
+    dashBarLabel: { color: '#64748B', fontSize: 10, fontWeight: '800', marginTop: 6 },
     dashCompareList: { gap: 10 },
-    compareCard: { padding: 14, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(47, 67, 54, 0.12)' },
+    compareCard: { padding: 14, borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
     compareCardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-    compareTitle: { color: '#2F4336', fontSize: 13, fontWeight: '800', flex: 1 },
+    compareTitle: { color: theme.colors.primary, fontSize: 13, fontWeight: '800', flex: 1 },
     compareBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-    compareBadgePos: { backgroundColor: 'rgba(22, 163, 74, 0.12)' },
-    compareBadgeNeg: { backgroundColor: 'rgba(220, 38, 38, 0.12)' },
+    compareBadgePos: { backgroundColor: 'rgba(16, 185, 129, 0.12)' },
+    compareBadgeNeg: { backgroundColor: 'rgba(239, 68, 68, 0.12)' },
     compareBadgeText: { fontSize: 11, fontWeight: '900' },
-    compareBadgeTextPos: { color: '#16A34A' },
-    compareBadgeTextNeg: { color: '#DC2626' },
-    compareDataRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(47, 67, 54, 0.08)' },
+    compareBadgeTextPos: { color: '#10B981' },
+    compareBadgeTextNeg: { color: '#EF4444' },
+    compareDataRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F1F5F9' },
     compareCol: { flex: 1 },
-    compareDivider: { width: 1, height: 24, backgroundColor: 'rgba(47, 67, 54, 0.10)', marginHorizontal: 12 },
-    compareColLabel: { color: '#6B8E7B', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
-    compareColVal: { color: '#2F4336', fontSize: 15, fontWeight: '900', marginTop: 2 },
-    compareColValMuted: { color: '#6B8E7B', fontSize: 14, fontWeight: '700', marginTop: 2 },
-    auditCard: { marginTop: 12, padding: 12, borderRadius: 14, backgroundColor: 'rgba(47, 67, 54, 0.06)', borderWidth: 1, borderColor: 'rgba(47, 67, 54, 0.12)' },
-    auditHeader: { color: '#B76E79', fontSize: 10, fontWeight: '900', letterSpacing: 1.0, marginBottom: 8 },
+    compareDivider: { width: 1, height: 24, backgroundColor: '#E2E8F0', marginHorizontal: 12 },
+    compareColLabel: { color: '#64748B', fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+    compareColVal: { color: theme.colors.primary, fontSize: 15, fontWeight: '900', marginTop: 2 },
+    compareColValMuted: { color: '#64748B', fontSize: 14, fontWeight: '700', marginTop: 2 },
+    auditCard: { marginTop: 12, padding: 12, borderRadius: 14, backgroundColor: theme.colors.accentSoft, borderWidth: 1, borderColor: theme.colors.accentLight },
+    auditHeader: { color: theme.colors.accent, fontSize: 10, fontWeight: '900', letterSpacing: 1.0, marginBottom: 8 },
     auditRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
-    auditName: { color: '#2F4336', fontSize: 14, fontWeight: '900' },
-    auditRole: { color: '#6B8E7B', fontSize: 12, fontWeight: '700', marginTop: 1 },
-    auditTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, paddingTop: 6, borderTopWidth: 1, borderTopColor: 'rgba(47, 67, 54, 0.08)' },
-    auditTimeText: { color: '#6B8E7B', fontSize: 11, fontWeight: '700' },
-    editorCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(47, 67, 54, 0.12)' },
-    editorAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#2F4336', alignItems: 'center', justifyContent: 'center' },
+    auditName: { color: theme.colors.primary, fontSize: 14, fontWeight: '900' },
+    auditRole: { color: '#64748B', fontSize: 12, fontWeight: '700', marginTop: 1 },
+    auditTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#E2E8F0' },
+    auditTimeText: { color: '#64748B', fontSize: 11, fontWeight: '700' },
+    editorCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
+    editorAvatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: theme.colors.accent, alignItems: 'center', justifyContent: 'center' },
     editorAvatarText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
-    editorName: { color: '#2F4336', fontSize: 15, fontWeight: '900' },
-    editorUsername: { color: '#6B8E7B', fontSize: 12, fontWeight: '700', marginTop: 1 },
-    editorBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(183, 110, 121, 0.12)' },
-    editorBadgeText: { color: '#B76E79', fontSize: 12, fontWeight: '900' },
+    editorName: { color: theme.colors.primary, fontSize: 15, fontWeight: '900' },
+    editorUsername: { color: '#64748B', fontSize: 12, fontWeight: '700', marginTop: 1 },
+    editorBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: theme.colors.accentSoft },
+    editorBadgeText: { color: theme.colors.accent, fontSize: 12, fontWeight: '900' },
     lineChartWrap: { height: 135, paddingTop: 10 },
     lineChartCanvas: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: '100%' },
     lineCol: { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end' },
-    lineTrack: { width: 2, height: '68%', backgroundColor: 'rgba(47, 67, 54, 0.12)', alignItems: 'center', position: 'relative' },
-    lineDot: { position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: 'rgba(47, 67, 54, 0.20)', alignItems: 'center', justifyContent: 'center' },
-    lineInnerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2F4336' },
-    userListWrap: { gap: 8 },
-    userListRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(47, 67, 54, 0.12)' },
-    userListActionBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(183, 110, 121, 0.10)', alignItems: 'center', justifyContent: 'center' }
+    lineTrack: { width: 2, height: '68%', backgroundColor: '#E2E8F0', alignItems: 'center', position: 'relative' },
+    lineDot: { position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: theme.colors.accentLight, alignItems: 'center', justifyContent: 'center' },
+    lineInnerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.accent },
+    userListWrap: { gap: 10 },
+    userCleanListCard: { borderRadius: 18, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8C3B5', overflow: 'hidden' },
+    userCleanListMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingVertical: 12 },
+    userCleanLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, paddingRight: 8 },
+    userCleanRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    userCleanName: { color: theme.colors.primary, fontSize: 15, fontWeight: '900' },
+    userCleanUsername: { color: theme.colors.muted, fontSize: 12, fontWeight: '600', marginTop: 1 },
+    userStatusDot: { width: 8, height: 8, borderRadius: 4 },
+    userStatusDotOn: { backgroundColor: '#10B981' },
+    userStatusDotOff: { backgroundColor: '#EF4444' },
+    userMenuBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#F7F4F0', alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
+    userDropdownBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', backgroundColor: '#FAF7F4', borderTopWidth: 1, borderTopColor: '#EFE7E1', paddingVertical: 10, paddingHorizontal: 8 },
+    userDropdownAction: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D8C3B5' },
+    userDropdownActionDanger: { borderColor: '#FCA5A5', backgroundColor: '#FEF2F2' },
+    customCalContainer: { backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1.5, borderColor: '#D8C3B5', padding: 14 },
+    customCalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 4 },
+    customCalNavBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#FAF7F4', alignItems: 'center', justifyContent: 'center' },
+    customCalMonthTitle: { fontSize: 15, fontWeight: '900', color: theme.colors.primary },
+    customCalDaysRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+    customCalDayLabel: { width: '13.5%', textAlign: 'center', fontSize: 11, fontWeight: '800', color: theme.colors.muted },
+    customCalGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 6 },
+    customCalCellEmpty: { width: '14.28%', height: 38 },
+    customCalCell: { width: '14.28%', height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
+    customCalCellActive1: { backgroundColor: theme.colors.accent, shadowColor: theme.colors.accent, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 5, elevation: 3 },
+    customCalCellActive2: { backgroundColor: theme.colors.primary, shadowColor: theme.colors.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 5, elevation: 3 },
+    customCalCellCompare: { backgroundColor: '#EFE7E1', borderWidth: 1, borderColor: '#D8C3B5' },
+    customCalCellText: { fontSize: 14, fontWeight: '800', color: theme.colors.primary },
+    customCalCellTextActive: { color: '#FFFFFF', fontWeight: '900' },
+    customCalCellTextCompare: { color: theme.colors.primary, fontWeight: '900' },
+    calSegmentContainer: { flexDirection: 'row', gap: 8, backgroundColor: '#FAF7F4', padding: 4, borderRadius: 18, borderWidth: 1.5, borderColor: '#D8C3B5' },
+    calSegmentBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: 'transparent' },
+    calSegmentBtnActive1: { backgroundColor: theme.colors.accent },
+    calSegmentBtnActive2: { backgroundColor: theme.colors.primary },
+    calSegmentTitle: { fontSize: 10, fontWeight: '900', color: theme.colors.muted, letterSpacing: 0.8 },
+    calSegmentVal: { fontSize: 13, fontWeight: '900', color: theme.colors.primary, marginTop: 1 },
+    calSegmentTextActive: { color: '#FFFFFF' },
+    calDirectWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#D8C3B5', height: 44, paddingHorizontal: 4 },
+    calDirectInput: { flex: 1, color: theme.colors.primary, fontSize: 14, fontWeight: '700', paddingHorizontal: 8, height: '100%' },
+    customDateSelectBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, backgroundColor: theme.colors.accentSoft, borderWidth: 1, borderColor: theme.colors.accentLight },
+    customDateSelectText: { color: theme.colors.accent, fontSize: 12, fontWeight: '800' },
+    dateInputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1.5, borderColor: '#D8C3B5', height: 48, paddingHorizontal: 12 },
+    dateTextInput: { flex: 1, color: theme.colors.primary, fontSize: 15, fontWeight: '700', height: '100%' },
+    dateCalBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: theme.colors.accentSoft, alignItems: 'center', justifyContent: 'center', marginLeft: 6 },
+    userListRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 16, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0' },
+    userListActionBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: theme.colors.accentSoft, alignItems: 'center', justifyContent: 'center' }
   });
 }
